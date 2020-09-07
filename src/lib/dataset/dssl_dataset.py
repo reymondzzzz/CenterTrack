@@ -461,7 +461,7 @@ class DsslDataset(data.Dataset):
     def _init_ret(self, ret, gt_det):
         max_objs = self.max_objs * self.opt.dense_reg
         ret['hm'] = np.zeros(
-            (self.num_categories, self.opt.output_h, self.opt.output_w),
+            (self.opt.num_classes, self.opt.output_h, self.opt.output_w),
             np.float32)
         ret['ind'] = np.zeros((max_objs), dtype=np.int64)
         ret['cat'] = np.zeros((max_objs), dtype=np.int64)

@@ -110,16 +110,17 @@ resnet_spec = {18: (BasicBlock, [2, 2, 2, 2]),
                101: (Bottleneck, [3, 4, 23, 3]),
                152: (Bottleneck, [3, 8, 36, 3])}
 
-class PoseResNet(nn.Module):
+class PoseResNet(BaseModel):
 
-    def __init__(self, num_layers, heads, head_convs, _):
-        super(PoseResNet, self).__init__(heads, head_convs, 1, 64)
+    def __init__(self, num_layers, heads, head_convs, opt):
+        super(PoseResNet, self).__init__(heads, head_convs, 1, 256, opt)
         block, layers = resnet_spec[num_layers]
         self.inplanes = 64
+        self.opt = opt
         self.deconv_with_bias = False
         self.heads = heads
 
-        super(PoseResNet, self).__init__()
+        # super(PoseResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
@@ -129,6 +130,18 @@ class PoseResNet(nn.Module):
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        if opt.pre_img:
+            self.pre_img_layer = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=7, stride=2,
+                      padding=3, bias=False),
+            nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+            nn.ReLU(inplace=True))
+        if opt.pre_hm:
+            self.pre_hm_layer = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=7, stride=2,
+                    padding=3, bias=False),
+            nn.BatchNorm2d(64, momentum=BN_MOMENTUM),
+            nn.ReLU(inplace=True))
 
         # used for deconv layers
         self.deconv_layers = self._make_deconv_layer(
@@ -152,6 +165,27 @@ class PoseResNet(nn.Module):
 
         x = self.deconv_layers(x)
         return [x]
+
+    def imgpre2feats(self, x, pre_img=None, pre_hm=None):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+
+        if pre_img is not None:
+            x = x + self.pre_img_layer(pre_img)
+        if pre_hm is not None:
+            x = x + self.pre_hm_layer(pre_hm)
+
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.deconv_layers(x)
+        return [x]
+
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
