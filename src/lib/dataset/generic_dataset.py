@@ -163,8 +163,19 @@ class GenericDataset(data.Dataset):
     file_name = img_info['file_name']
     img_path = os.path.join(img_dir, file_name)
     ann_ids = coco.getAnnIds(imgIds=[img_id])
-    anns = copy.deepcopy(coco.loadAnns(ids=ann_ids))
+    anns_ = copy.deepcopy(coco.loadAnns(ids=ann_ids))
+    anns = []
+    for ann in anns_:
+      if ann['face_box'][3] * ann['face_box'][2] == 0:
+        continue
+      ann['bbox'] = ann['face_box']
+      anns.append(ann)
+
     img = cv2.imread(img_path)
+    # for ann in anns:
+    #   cv2.rectangle(img, (int(ann['bbox'][0]), int(ann['bbox'][1])), (int(ann['bbox'][0] + ann['bbox'][2]), int(ann['bbox'][1] + ann['bbox'][3])), (255, 0, 0), 2)
+    # cv2.imshow('im', img)
+    # cv2.waitKey(0)
     return img, anns, img_info, img_path
 
   def _load_data(self, index):
