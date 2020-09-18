@@ -387,7 +387,7 @@ class GenericDataset(data.Dataset):
         return anns
 
     def resize_with_aspect_ratio(self, image, anns):
-        bboxes = [self._coco_box_to_bbox(ann['bbox']) for ann in anns]
+        bboxes = [self._coco_box_to_bbox(ann['bbox'], image.shape[1], image.shape[0]) for ann in anns]
 
         transformed = self._input_preprocess(image=image, bboxes=bboxes, category_ids=[0] * len(bboxes),
                                              force_apply=True)
@@ -447,7 +447,7 @@ class GenericDataset(data.Dataset):
         return self.resize_with_aspect_ratio(img, anns)
 
     def _get_output_bboxes(self, image, anns):
-        bboxes = [self._coco_box_to_bbox(ann['bbox']) for ann in anns]
+        bboxes = [self._coco_box_to_bbox(ann['bbox'], image.shape[1], image.shape[0]) for ann in anns]
 
         transformed = self._output_preprocess(image=image, bboxes=bboxes, category_ids=[0] * len(bboxes),
                                               force_apply=True)
@@ -534,9 +534,13 @@ class GenericDataset(data.Dataset):
             self._ignore_region(ret['hm_hp'][:, int(bbox[1]): int(bbox[3]) + 1,
                                 int(bbox[0]): int(bbox[2]) + 1])
 
-    def _coco_box_to_bbox(self, box):
+    def _coco_box_to_bbox(self, box, w, h):
         bbox = np.array([box[0], box[1], box[0] + box[2], box[1] + box[3]],
                         dtype=np.float32)
+        bbox[0] = np.clip(bbox[0], 0, w)
+        bbox[1] = np.clip(bbox[1], 0, h)
+        bbox[2] = np.clip(bbox[2], 0, w)
+        bbox[3] = np.clip(bbox[3], 0, h)
         return bbox
 
     def _get_bbox_output(self, bbox, trans_output, height, width):
