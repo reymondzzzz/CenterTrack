@@ -106,6 +106,12 @@ class GenericDataset(data.Dataset):
                                value=(128, 128, 128), rotate_limit=8),
         ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
 
+
+        self.only_shift_scale = A.Compose([
+            A.ShiftScaleRotate(shift_limit=self.opt.shift, scale_limit=self.opt.scale, border_mode=cv2.BORDER_CONSTANT,
+                               value=(128, 128, 128), rotate_limit=0, p=1),
+        ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['category_ids']))
+
     def debug_img_bbox(self, img, bboxes, name):
         for b in bboxes:
             color = (0, 255, 0)
@@ -121,6 +127,10 @@ class GenericDataset(data.Dataset):
 
     def augm(self, img, bboxes):
         res = self.augm_preprocess(image=img, bboxes=bboxes, category_ids=[0] * len(bboxes), force_apply=True)
+        return res['image'], res['bboxes']
+
+    def only_shift_and_scale(self, img, bboxes):
+        res = self.only_shift_scale(image=img, bboxes=bboxes, category_ids=[0] * len(bboxes), force_apply=True)
         return res['image'], res['bboxes']
 
     def __getitem__(self, index):
@@ -146,7 +156,8 @@ class GenericDataset(data.Dataset):
             c, s, rot, [opt.output_w, opt.output_h])
         inp, input_bboxes = self._get_input(img, trans_input, anns)
 
-        inp, input_bboxes = self.augm(inp, input_bboxes)
+        if self.split == 'train':
+            inp, input_bboxes = self.augm(inp, input_bboxes)
 
         # self.debug_img_bbox(inp, input_bboxes, 'current')
 
@@ -165,16 +176,20 @@ class GenericDataset(data.Dataset):
                 trans_input_pre = trans_input
                 trans_output_pre = trans_output
             else:
-                c_pre, aug_s_pre, _ = self._get_aug_param(
-                    c, s, width, height, disturb=True)
-                s_pre = s * aug_s_pre
-                trans_input_pre = get_affine_transform(
-                    c_pre, s_pre, rot, [opt.input_w, opt.input_h])
-                trans_output_pre = get_affine_transform(
-                    c_pre, s_pre, rot, [opt.output_w, opt.output_h])
+                # c_pre, aug_s_pre, _ = self._get_aug_param(
+                #     c, s, width, height, disturb=True)
+                # s_pre = s * aug_s_pre
+                # trans_input_pre = get_affine_transform(
+                #     c_pre, s_pre, rot, [opt.input_w, opt.input_h])
+                # trans_output_pre = get_affine_transform(
+                #     c_pre, s_pre, rot, [opt.output_w, opt.output_h])
+                trans_input_pre = None
             pre_img, pre_bboxes = self._get_input(pre_image, trans_input_pre, pre_anns)
 
-            pre_img, pre_bboxes = self.augm(pre_img, pre_bboxes)
+            if self.split == 'train':
+                pre_img, pre_bboxes = self.augm(pre_img, pre_bboxes)
+            else:
+                pre_img, pre_bboxes = self.only_shift_and_scale(pre_img, pre_bboxes)
 
             # self.debug_img_bbox(pre_img, pre_bboxes, 'pre')
 
