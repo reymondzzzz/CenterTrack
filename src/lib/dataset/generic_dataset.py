@@ -148,7 +148,7 @@ class GenericDataset(data.Dataset):
 
         inp, input_bboxes = self.augm(inp, input_bboxes)
 
-        self.debug_img_bbox(inp, input_bboxes, 'current')
+        # self.debug_img_bbox(inp, input_bboxes, 'current')
 
         ret = {'image': inp}
         gt_det = {'bboxes': [], 'scores': [], 'clses': [], 'cts': []}
@@ -176,16 +176,16 @@ class GenericDataset(data.Dataset):
 
             pre_img, pre_bboxes = self.augm(pre_img, pre_bboxes)
 
-            self.debug_img_bbox(pre_img, pre_bboxes, 'pre')
+            # self.debug_img_bbox(pre_img, pre_bboxes, 'pre')
 
             pre_hm, pre_cts, track_ids = self._get_pre_dets(pre_anns, pre_bboxes)
             ret['pre_img'] = pre_img
             if opt.pre_hm:
                 ret['pre_hm'] = pre_hm
 
-                pre_hm_img = pre_hm.transpose(1, 2, 0) * 255
-                pre_hm_img = pre_hm_img.astype(np.int8)
-                cv2.imshow('pre_hm_img', pre_hm_img)
+                # pre_hm_img = pre_hm.transpose(1, 2, 0) * 255
+                # pre_hm_img = pre_hm_img.astype(np.int8)
+                # cv2.imshow('pre_hm_img', pre_hm_img)
 
         ### init samples
         self._init_ret(ret, gt_det)
@@ -215,9 +215,9 @@ class GenericDataset(data.Dataset):
                     'flipped': flipped}
             ret['meta'] = meta
 
-        hm_img = ret['hm'].transpose(1, 2, 0) * 255
-        hm_img = hm_img.astype(np.int8)
-        cv2.imshow('hm_img', hm_img)
+        # hm_img = ret['hm'].transpose(1, 2, 0) * 255
+        # hm_img = hm_img.astype(np.int8)
+        # cv2.imshow('hm_img', hm_img)
 
         ret['image'] = ret['image'].transpose(2, 0, 1).astype(np.float32) / 256
         ret['pre_img'] = ret['pre_img'].transpose(2, 0, 1).astype(np.float32) / 256
